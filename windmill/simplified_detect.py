@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-PATH = r'D:\photos\robomaster_photo\2.jpg'
+PATH = r''
 img = cv2.imread(PATH, 1)
 gray_img = cv2.imread(PATH, 0)
 blue, green, red = cv2.split(img)
@@ -66,18 +66,16 @@ for i in index_list[0]:
             closed=True))  # 第二个参数epsilon越低，表示拟合精度越高
 
 # 剔除非四边形
-for arr in appro_list:
-    if not arr.size == 8:
-        appro_list.remove(arr)
-    else:
-        sum_list.append(np.sum(arr.ravel()))  # np.ravel将矩阵flat成一维，np.sum加和
+vertex_list = list(filter(lambda x: x.size == 8, appro_list))
+
+sum_list = [np.sum(vertex.ravel()) for vertex in vertex_list]  # np.ravel将矩阵flat成一维，np.sum加和
 
 print('number of rectangles:', len(appro_list))
 print('sum of coordinates of vertex of rectangles:', sum_list)
 
 # 对相邻近的矩形去重
 sum_list2 = list(sum_list)  # 用list构造新列表进行deep copy
-appro_list2 = []
+filtered_vertex = []
 # for range循环中不要对自身进行修改，防止下标过界等，用while循环
 while sum_list:  # 列表不为空，取最后一个元素
     check_num = sum_list.pop()
@@ -86,16 +84,15 @@ while sum_list:  # 列表不为空，取最后一个元素
             sum_list.remove(num)  # 去除列表所有与check_num相近的值
     # 将check_num对应元素（通过下标获得）放到新列表中
     #print(check_num, sum_list2.index(check_num))
-    appro_list2.append(appro_list[sum_list2.index(check_num)])
+    filtered_vertex.append(vertex_list[sum_list2.index(check_num)])
 
 #print(len(appro_list), len(appro_list2))
 
-for appro in appro_list2:
+for vertex in filtered_vertex:
     for j in range(4):
         # 通过画线方式来在原图像中绘制矩形
-        cv2.line(img, tuple(appro[j, 0]), tuple(
-            appro[(j + 1) % 4, 0]), (255, 0, 0), 2)
+        cv2.line(img, tuple(vertex[j, 0]), tuple(
+            vertex[(j + 1) % 4, 0]), (255, 0, 0), 2)
 
 cv2.imshow('', img)
 cv2.waitKey(0)
-cv2.imwrite('1.jpg', img)
