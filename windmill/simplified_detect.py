@@ -13,7 +13,7 @@ red_img = red - blue # 采用红色通道与蓝色通道的差作为待处理图
 width, height = red_img.shape
 for x in range(width):
     for y in range(height):
-        if red_img[x, y] < 30:
+        if red_img[x, y] < 50:  # 根据需要调整阈值，越大时去除外部噪点效果越好，但图形越浅
             red_img[x, y] = 255
 
 # 二值化
@@ -23,7 +23,7 @@ bin_img = cv2.threshold(red_img, 200, 255, cv2.THRESH_BINARY)[1]
 bin_img = np.where(bin_img > 180, 0, 255)
 
 # 对其中白色部分先膨胀，再腐蚀，去除内部噪声
-kernel = np.ones((2, 2), np.uint8)
+kernel = np.ones((4, 4), np.uint8)  #核越大则图形越膨胀变粗，内部噪点也越少，需避免相交
 
 bin_img = bin_img.astype(np.uint8) #int32转成uint8
 dilation = cv2.dilate(bin_img, kernel, iterations=2)
@@ -37,7 +37,7 @@ cv2.floodFill(erosion, mask, (30, 30), 255, 10, 10,
 
 
 # 中值滤波,去除噪音
-blured_img = cv2.medianBlur(erosion, ksize=9)  # ksize取7，9时效果较好
+blured_img = cv2.medianBlur(erosion, ksize=3)  # 只能取奇数,具体差别不大
 
 # 边缘检测,获得图形边缘
 edge = cv2.Canny(blured_img, 0, 255)  # 后两参数无影响
