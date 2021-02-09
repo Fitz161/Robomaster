@@ -28,6 +28,7 @@ h, w = erosion.shape
 mask = np.zeros([h + 2, w + 2], np.uint8)
 cv2.floodFill(erosion, mask, (30, 30), 0, 10, 10,
               cv2.FLOODFILL_FIXED_RANGE)  # 5，6两个参数的值无影响
+# 参数newVal=255时结合下面筛选轮廓的最大矩形时 width和height的范围 可选中所有蓝色区域(包括中心，装甲板，扇叶）
 
 
 # 边缘检测,获得图形边缘
