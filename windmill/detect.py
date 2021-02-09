@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-PATH = r''
+PATH = r'D:/photos/robomaster/5.png'
 img = cv2.imread(PATH, 1)
 gray_img = cv2.imread(PATH, 0)
 blue, green, red = cv2.split(img)
@@ -19,20 +19,14 @@ for x in range(width):
 # 二值化
 bin_img = cv2.threshold(red_img, 200, 255, cv2.THRESH_BINARY)[1]
 
-# 反转二值图颜色
-bin_img = np.where(bin_img > 180, 0, 255)
-
-# 对其中白色部分先膨胀，再腐蚀，去除内部噪声
-kernel = np.ones((4, 4), np.uint8)  # 核越大则图形越膨胀变粗，内部噪点也越少，需避免相交
-
-bin_img = bin_img.astype(np.uint8)  # int32转成uint8
-dilation = cv2.dilate(bin_img, kernel, iterations=2)
-erosion = cv2.erode(dilation, kernel, iterations=2)
+# 黑色部分膨胀，使图形更加清晰
+kernel = np.ones((3,3),np.uint8)
+erosion = cv2.erode(bin_img, kernel, iterations=1)
 
 # 漫水填充，获取图形内部部分
 h, w = erosion.shape
 mask = np.zeros([h + 2, w + 2], np.uint8)
-cv2.floodFill(erosion, mask, (30, 30), 255, 10, 10,
+cv2.floodFill(erosion, mask, (30, 30), 0, 10, 10,
               cv2.FLOODFILL_FIXED_RANGE)  # 5，6两个参数的值无影响
 
 
@@ -51,10 +45,12 @@ blade_list, blade_center = [], []
 for contour in contours:
     # 返回轮廓最小外接矩形的 中心(x,y), (宽,高), 旋转角度
     rectangle = cv2.minAreaRect(contour)
-    length = sorted(rectangle[1])  # 宽和高的大小不确定
+    width, height = sorted(rectangle[1])  # 宽和高的大小不确定，进行排序
+    if width < 5 or height < 15: # 剔除过小的轮廓
+        continue
     # print(length[1] / length[0])   # 1.6  3.8
-    if length[1] / length[0] > 2:
-        blade_width.append(length[0])
+    if height / width > 2:
+        blade_width.append(width)
         blade_list.append(cv2.boxPoints(rectangle))
         blade_center.append(rectangle[0])
     else:
