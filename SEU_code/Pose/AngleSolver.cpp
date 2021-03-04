@@ -28,9 +28,30 @@ using namespace std;
 namespace rm
 {
 
+/*bool solvePnP(InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs,
+ OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int flags=ITERATIVE )
+
+　　objectPoints：特征点的世界坐标，坐标值需为float型，不能为double型，可以为mat类型，也可以直接输入vector
+　　imagePoints：特征点在图像中的像素坐标，可以输入mat类型，也可以直接输入vector，
+	注意输入点的顺序要与前面的特征点的世界坐标一一对应
+　　cameraMatrix：相机内参矩阵
+　　distCoeffs：相机的畸变参数【Mat_(5, 1)】
+　　rvec：输出的旋转向量
+　　tvec：输出的平移矩阵
+　　最后的输入参数有三个可选项：
+　　CV_ITERATIVE，默认值，它通过迭代求出重投影误差最小的解作为问题的最优解。
+　　CV_P3P则是使用非常经典的Gao的P3P问题求解算法。
+　　CV_EPNP使用文章《EPnP: Efficient Perspective-n-Point Camera Pose Estimation》中的方法求解。*/
+
 std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_ARMOR_BIG = std::vector<cv::Point3f>
 {
-
+/*
+大装甲板
+objectPoints特征点世界坐标
+以特征点(装甲板的四个角点)所在平面为世界坐标XY平面，并在该平面中确定世界坐标的原点
+这里以装甲板的中心为世界坐标的原点，并按照逆时针方向逐个输入四个角点的世界坐标
+输入需要为float或point3f类型
+*/
 		cv::Point3f(-105, -30, 0),	//tl
 		cv::Point3f(105, -30, 0),	//tr
 		cv::Point3f(105, 30, 0),	//br
@@ -38,6 +59,7 @@ std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_ARMOR_BIG = std::vector<c
 };
 std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_RUNE = std::vector<cv::Point3f>
 {
+	/*大符部分*/
 	cv::Point3f(-370, -220, 0),
 	cv::Point3f(0, -220, 0),
 	cv::Point3f(370, -220, 0),
@@ -51,6 +73,7 @@ std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_RUNE = std::vector<cv::Po
 
 std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_ARMOR_SMALL = std::vector<cv::Point3f>
 {
+	/*小装甲板角点世界坐标*/
 	cv::Point3f(-65, -35, 0),	//tl
 	cv::Point3f(65, -35, 0),	//tr
 	cv::Point3f(65, 35, 0),		//br
@@ -59,18 +82,21 @@ std::vector<cv::Point3f> AngleSolverParam::POINT_3D_OF_ARMOR_SMALL = std::vector
 
 AngleSolver::AngleSolver()
 {
+	//将四个像素点坐标初始化为(0, 0)
 	for(int ll = 0; ll <= 3; ll++)
 		target_nothing.push_back(cv::Point2f(0.0, 0.0));
 }
 
+// 构造函数，进行成员变量的赋值和初始化
 AngleSolver::AngleSolver(const AngleSolverParam & AngleSolverParam)
 {
 	_params = AngleSolverParam;
-	_cam_instant_matrix = _params.CAM_MATRIX.clone();
-	for(int ll = 0; ll <= 3; ll++)
+	_cam_instant_matrix = _params.CAM_MATRIX.clone(); //复制相机内参矩阵
+	for(int ll = 0; ll <= 3; ll++) //初始化
 		target_nothing.push_back(cv::Point2f(0.0, 0.0));
 }
 
+// 进行_params和_cam_instant_matrix的赋值
 void AngleSolver::init(const AngleSolverParam& AngleSolverParam)
 {
 	_params = AngleSolverParam;
@@ -81,6 +107,7 @@ void AngleSolver::setTarget(const std::vector<cv::Point2f> objectPoints, int obj
 {
 	if(objectType == 1 || objectType == 2)
 	{
+		// 将算法重置为PNP算法
 		if(angle_solver_algorithm == 0 || angle_solver_algorithm == 2)
 		{
 			angle_solver_algorithm = 1; cout << "algorithm is reset to PNP Solution" << endl;
@@ -94,6 +121,7 @@ void AngleSolver::setTarget(const std::vector<cv::Point2f> objectPoints, int obj
 	}
 	if(objectType == 3 || objectType == 4)
 	{
+		// 算法设为PNP解算大符
 		angle_solver_algorithm = 2;
 		point_2d_of_rune = objectPoints;
 	}
@@ -125,6 +153,7 @@ void AngleSolver::setTarget(const std::vector<cv::Point2f> runePoints)
 }
 */
 
+//debug模式执行下方代码
 #ifdef DEBUG
 
 void AngleSolver::showPoints2dOfArmor()
@@ -163,13 +192,18 @@ int AngleSolver::showAlgorithm()
 
 
 AngleSolver::AngleFlag AngleSolver::solve()
+//类外定义AngleSolver类的成员函数solve，返回AngleSolver::AngleFlag类型的数据
 {
-	if(angle_solver_algorithm == 1)
+	if(angle_solver_algorithm == 1) //PNP算法
 	{
 		if(enemy_type == 1)
+			//使用solvePNP求解相机姿态和位置信息  rvec：输出的旋转向量，tvec：输出的平移相量
+			//平移向量就是以当前摄像头中心为原点时物体原点所在的位置。
 			solvePnP(_params.POINT_3D_OF_ARMOR_BIG, point_2d_of_armor, _cam_instant_matrix, _params.DISTORTION_COEFF, _rVec, _tVec, false, CV_ITERATIVE);
 		if(enemy_type == 0)
 			solvePnP(_params.POINT_3D_OF_ARMOR_SMALL, point_2d_of_armor, _cam_instant_matrix, _params.DISTORTION_COEFF, _rVec, _tVec, false, CV_ITERATIVE);
+		//因为我们的目的是让枪管瞄准装甲板的中央，而得到的坐标是以摄像头中心为原点的，要得到正确的转角需要对这个坐标进行平移，将原点平移到云台的轴上
+		//at<double>(1, 0) 返回1行0列对应元素的引用，这里减去相机和gun间的偏移量，进行修正
 		_tVec.at<double>(1, 0) -= _params.Y_DISTANCE_BETWEEN_GUN_AND_CAM;
 		_xErr = atan(_tVec.at<double>(0, 0) / _tVec.at<double>(2, 0)) / 2 / CV_PI * 360;
 		_yErr = atan(_tVec.at<double>(1, 0) / _tVec.at<double>(2, 0)) / 2 / CV_PI * 360;
@@ -279,6 +313,7 @@ AngleSolver::AngleFlag AngleSolver::solve()
 	return ANGLE_ERROR;
 }
 
+//偏移量补偿
 void AngleSolver::compensateOffset()
 {
 	/* z of the camera COMS */
@@ -294,6 +329,7 @@ void AngleSolver::compensateOffset()
 	_euclideanDistance = d_prime;
 }
 
+//重力补偿
 void AngleSolver::compensateGravity()
 {
 	const auto& theta_p_prime = _yErr / 180 * CV_PI;
@@ -306,6 +342,7 @@ void AngleSolver::compensateGravity()
 
 void AngleSolver::setResolution(const cv::Size2i& image_resolution)
 {
+	//好像有问题
 	image_size = image_resolution;
 	//cout << _cam_instant_matrix.at<double>(0, 2) << "  " << _cam_instant_matrix.at<double>(1, 2) << endl;
 	_cam_instant_matrix.at<double>(0, 2) = _params.CAM_MATRIX.at<double>(0, 2) - (1920 / 2 - image_size.width / 2);
@@ -355,6 +392,7 @@ double AngleSolver::getDistance()
 //
 //}
 
+//从xml文件中获取枪口和相机间偏移量
 void AngleSolverParam::readFile(const int id)
 {
 	cv::FileStorage fsread("../Pose/angle_solver_params.xml", cv::FileStorage::READ);
@@ -365,10 +403,11 @@ void AngleSolverParam::readFile(const int id)
 	}
 	fsread["Y_DISTANCE_BETWEEN_GUN_AND_CAM"] >> Y_DISTANCE_BETWEEN_GUN_AND_CAM;
 
-#ifdef DEBUG 
+#ifdef DEBUG
 	std::cout << Y_DISTANCE_BETWEEN_GUN_AND_CAM << std::endl;
 #endif // DEBUG
 
+	//通过id来指定获取不同类型的相机内参矩阵和畸变参数
 	switch(id)
 	{
 	case 0:
